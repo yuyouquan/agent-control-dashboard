@@ -1,673 +1,86 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🧠 子代理控制沙盘</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'SF Mono', sans-serif; background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); color: #e6edf3; min-height: 100vh; }
         
-        body {
-            font-family: 'SF Mono', 'Monaco', 'Consolas', 'PingFang SC', sans-serif;
-            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
-            color: #e6edf3;
-            min-height: 100vh;
-        }
+        .header { background: linear-gradient(180deg, #1a2332 0%, #0d1117 100%); padding: 20px 30px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { color: #58a6ff; font-size: 22px; }
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; background: #238636; color: #fff; }
         
-        /* Header */
-        .header {
-            background: linear-gradient(180deg, #1a2332 0%, #0d1117 100%);
-            padding: 20px 30px;
-            border-bottom: 1px solid #30363d;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header h1 {
-            color: #58a6ff;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .header .actions {
-            display: flex;
-            gap: 10px;
-        }
-        .btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.2s;
-        }
-        .btn-primary {
-            background: #238636;
-            color: #fff;
-        }
-        .btn-primary:hover { background: #2ea043; }
-        .btn-danger {
-            background: #da3633;
-            color: #fff;
-        }
-        .btn-danger:hover { background: #f85149; }
-        .btn-secondary {
-            background: #21262d;
-            color: #c9d1d9;
-            border: 1px solid #30363d;
-        }
-        .btn-secondary:hover { background: #30363d; }
+        .stats-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #30363d; }
+        .stat { background: #161b22; padding: 20px; text-align: center; }
+        .stat-value { font-size: 32px; font-weight: 700; }
+        .stat-label { font-size: 11px; margin-top: 5px; color: #8b949e; text-transform: uppercase; }
         
-        /* Stats */
-        .stats-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1px;
-            background: #30363d;
-        }
-        .stat {
-            background: #161b22;
-            padding: 20px;
-            text-align: center;
-        }
-        .stat-value { font-size: 32px; font-weight: bold; color: #58a6ff; }
-        .stat-label { font-size: 12px; color: #8b949e; margin-top: 5px; }
+        .section { padding: 20px 30px; }
+        .section h2 { color: #8b949e; font-size: 14px; text-transform: uppercase; margin-bottom: 15px; }
         
-        /* Agent Grid */
-        .agent-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 15px;
-            padding: 20px;
-        }
+        .agents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 16px; }
         
-        /* Agent Card */
-        .agent-card {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 12px;
-            overflow: hidden;
-            transition: all 0.3s;
-            cursor: pointer;
-        }
-        .agent-card:hover {
-            border-color: #58a6ff;
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(88, 166, 255, 0.2);
-        }
-        .agent-card.idle { border-left: 4px solid #8b949e; }
-        .agent-card.working { border-left: 4px solid #3fb950; }
-        .agent-card.error { border-left: 4px solid #f85149; }
+        .agent-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 16px; }
+        .agent-card.running { border-left: 4px solid #3fb950; }
+        .agent-card.done { border-left: 4px solid #58a6ff; }
+        .agent-card.timeout { border-left: 4px solid #f0883e; }
         
-        /* Card Header */
-        .card-header {
-            padding: 15px;
-            background: #21262d;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .agent-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-        .agent-name {
-            font-weight: bold;
-            font-size: 14px;
-            color: #e6edf3;
-        }
-        .agent-role {
-            font-size: 11px;
-            color: #8b949e;
-        }
-        .status-badge {
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-        .status-working { background: #238636; color: #fff; }
-        .status-idle { background: #30363d; color: #8b949e; }
-        .status-error { background: #da3633; color: #fff; }
+        .agent-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .agent-name { font-weight: 600; color: #c9d1d9; }
+        .agent-status { padding: 4px 10px; border-radius: 12px; font-size: 11px; }
+        .agent-status.running { background: #238636; color: #fff; }
+        .agent-status.done { background: #58a6ff; color: #fff; }
+        .agent-status.timeout { background: #f0883e; color: #000; }
         
-        /* Card Body */
-        .card-body {
-            padding: 15px;
-        }
+        .agent-task { color: #8b949e; font-size: 12px; margin-bottom: 12px; padding: 10px; background: #0d1117; border-radius: 6px; word-break: break-all; }
+        .agent-meta { display: flex; gap: 20px; color: #8b949e; font-size: 12px; }
         
-        .current-task {
-            background: #0d1117;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
-        }
-        .current-task .label {
-            font-size: 10px;
-            color: #8b949e;
-            margin-bottom: 5px;
-        }
-        .current-task .task {
-            font-size: 12px;
-            color: #e6edf3;
-            line-height: 1.4;
-        }
+        .empty-state { text-align: center; padding: 40px; color: #8b949e; }
+        .time { text-align: center; padding: 10px; color: #8b949e; font-size: 12px; }
         
-        .skills {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-bottom: 12px;
-        }
-        .skill-tag {
-            padding: 3px 8px;
-            background: #30363d;
-            border-radius: 4px;
-            font-size: 10px;
-            color: #c9d1d9;
-        }
-        
-        .agent-meta {
-            font-size: 11px;
-            color: #8b949e;
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-overlay.active { display: flex; }
-        
-        .modal {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        .modal-header {
-            padding: 20px;
-            background: #21262d;
-            border-bottom: 1px solid #30363d;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .modal-header h2 { color: #58a6ff; }
-        .modal-close {
-            background: none;
-            border: none;
-            color: #8b949e;
-            font-size: 24px;
-            cursor: pointer;
-        }
-        .modal-body { padding: 20px; }
-        
-        .detail-section {
-            margin-bottom: 20px;
-        }
-        .detail-section h3 {
-            color: #58a6ff;
-            font-size: 14px;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #30363d;
-        }
-        .detail-section p {
-            color: #c9d1d9;
-            font-size: 13px;
-            line-height: 1.6;
-        }
-        
-        .modal-actions {
-            padding: 20px;
-            background: #21262d;
-            border-top: 1px solid #30363d;
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-        
-        /* Create Agent Form */
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-group label {
-            display: block;
-            color: #8b949e;
-            font-size: 12px;
-            margin-bottom: 5px;
-        }
-        .form-group input, .form-group select, .form-group textarea {
-            width: 100%;
-            padding: 10px;
-            background: #0d1117;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            color: #e6edf3;
-            font-size: 13px;
-        }
-        .form-group input:focus, .form-group textarea:focus {
-            outline: none;
-            border-color: #58a6ff;
-        }
-        
-        /* Activity Log */
-        .activity-log {
-            padding: 20px;
-            background: #0d1117;
-            margin: 20px;
-            border-radius: 8px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        .activity-log h3 {
-            color: #8b949e;
-            font-size: 12px;
-            margin-bottom: 10px;
-        }
-        .activity-item {
-            font-size: 11px;
-            color: #8b949e;
-            padding: 5px 0;
-            border-bottom: 1px solid #21262d;
-        }
-        .activity-item:last-child { border: none; }
-        .activity-time { color: #484f58; }
-        
+        .note { text-align: center; padding: 10px; background: #f0883e; color: #000; font-size: 12px; }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🧠 子代理控制沙盘</h1>
-        <div class="actions">
-            <button class="btn btn-secondary" onclick="refreshAgents()">🔄 刷新</button>
-            <button class="btn btn-primary" onclick="openCreateModal()">➕ 创建代理</button>
-        </div>
+        <button class="btn" onclick="location.reload()">🔄 刷新</button>
     </div>
+    <div class="note">📌 页面每5秒自动刷新以获取最新状态</div>
+    <div class="time" id="updateTime"></div>
     
     <div class="stats-bar">
-        <div class="stat">
-            <div class="stat-value">9</div>
-            <div class="stat-label">📋 总代理数</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value" id="workingCount">1</div>
-            <div class="stat-label">🔄工作中</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value" id="idleCount">8</div>
-            <div class="stat-label">💤空闲中</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value">0</div>
-            <div class="stat-label">❌错误</div>
+        <div class="stat"><div class="stat-value" style="color:#3fb950" id="activeCount">0</div><div class="stat-label">运行中</div></div>
+        <div class="stat"><div class="stat-value" style="color:#58a6ff" id="recentCount">0</div><div class="stat-label">历史记录</div></div>
+        <div class="stat"><div class="stat-value" style="color:#f0883e" id="totalCount">0</div><div class="stat-label">总任务</div></div>
+    </div>
+    
+    <div class="section">
+        <h2>🔄 运行中的子代理</h2>
+        <div class="agents-grid" id="activeAgents">
+            <div class="empty-state">暂无运行中的子代理</div>
         </div>
     </div>
     
-    <div class="activity-log">
-        <h3>📜 最近活动</h3>
-        <div id="activityList">
-            <div class="activity-item"><span class="activity-time">08:00</span> 漏洞扫描自动任务启动</div>
-            <div class="activity-item"><span class="activity-time">07:00</span> 新闻摘要生成完成</div>
-            <div class="activity-item"><span class="activity-time">00:35</span> 安全专家子代理创建成功</div>
+    <div class="section">
+        <h2>📜 最近任务 (最近30分钟)</h2>
+        <div class="agents-grid" id="recentAgents">
+            <div class="empty-state">暂无历史记录</div>
         </div>
     </div>
-    
-    <div class="agent-grid" id="agentGrid">
-        <!-- Agent cards will be rendered here -->
-    </div>
-    
-    <!-- Agent Detail Modal -->
-    <div class="modal-overlay" id="detailModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 id="modalTitle">代理详情</h2>
-                <button class="modal-close" onclick="closeModal()">×</button>
-            </div>
-            <div class="modal-body" id="modalBody">
-                <!-- Details will be rendered here -->
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-danger" onclick="deleteAgent()">🗑️ 删除代理</button>
-                <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Create Agent Modal -->
-    <div class="modal-overlay" id="createModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>➕ 创建新代理</h2>
-                <button class="modal-close" onclick="closeCreateModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>代理名称 (ID)</label>
-                    <input type="text" id="newAgentId" placeholder="例如: data-analyst">
-                </div>
-                <div class="form-group">
-                    <label>角色类型</label>
-                    <select id="newAgentRole">
-                        <option value="">选择角色...</option>
-                        <option value="product-manager">产品经理</option>
-                        <option value="project-manager">项目经理</option>
-                        <option value="architect">架构师</option>
-                        <option value="frontend-dev">前端开发</option>
-                        <option value="backend-dev">后端开发</option>
-                        <option value="qa-engineer">QA工程师</option>
-                        <option value="news-miner">新闻矿工</option>
-                        <option value="daily-reporter">日报生成</option>
-                        <option value="security-expert">安全专家</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>模型</label>
-                    <select id="newAgentModel">
-                        <option value="minimax-cn/MiniMax-M2.5">MiniMax M2.5 (默认)</option>
-                        <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
-                        <option value="gpt-4o">GPT-4o</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>工作空间 (可选)</label>
-                    <input type="text" id="newAgentWorkspace" placeholder="默认: ~/.openclaw/workspace">
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeCreateModal()">取消</button>
-                <button class="btn btn-primary" onclick="createAgent()">✅ 创建</button>
-            </div>
-        </div>
-    </div>
-    
+
     <script>
-        // Agent data
-        const agents = [
-            {
-                id: 'main',
-                name: '🦞 OpenClaw',
-                role: '主代理',
-                status: 'working',
-                currentTask: '与用户对话中 - 处理漏洞扫描请求',
-                skills: ['对话理解', '任务分配', '工具调用', '语音处理'],
-                description: 'OpenClaw 主代理，负责协调所有子代理，处理用户请求。',
-                workspace: '~/.openclaw/workspace',
-                createdAt: '2026-01-01'
-            },
-            {
-                id: 'security-expert',
-                name: '🛡️ 安全专家',
-                role: '渗透测试',
-                status: 'working',
-                currentTask: '漏洞扫描进行中 - 116个进程正在扫描400+目标',
-                skills: ['Strix', 'Nmap', 'Nikto', 'SQLMap', '渗透测试', '漏洞报告'],
-                description: '专业的网络安全渗透测试专家，专注于发现和报告安全漏洞。使用多种自动化工具进行Web、移动应用和API安全测试。',
-                workspace: '~/.openclaw/workspace/multi-agent-team/agents/security-expert',
-                createdAt: '2026-02-21'
-            },
-            {
-                id: 'news-miner',
-                name: '📰 新闻矿工',
-                role: '内容采集',
-                status: 'idle',
-                currentTask: '等待定时任务 - 每天7:00自动执行',
-                skills: ['Reddit摘要', 'YouTube摘要', '数据采集', '内容整理'],
-                description: '负责从Reddit、YouTube等平台采集热门内容，生成每日摘要报告。',
-                workspace: '~/.openclaw/workspace/multi-agent-team/agents/news-miner',
-                createdAt: '2026-02-15'
-            },
-            {
-                id: 'daily-reporter',
-                name: '📊 日报生成',
-                role: '报告生成',
-                status: 'idle',
-                currentTask: '等待定时任务 - 每天8:00自动执行',
-                skills: ['报告生成', '数据汇总', '文档编辑', '飞书集成'],
-                description: '负责生成每日工作汇总报告，推送到飞书。',
-                workspace: '~/.openclaw/workspace/multi-agent-team/agents/daily-reporter',
-                createdAt: '2026-02-15'
-            },
-            {
-                id: 'product-manager',
-                name: '📦 产品经理',
-                role: '产品管理',
-                status: 'idle',
-                currentTask: '等待分配任务',
-                skills: ['需求分析', 'PRD撰写', '项目管理', '用户研究'],
-                description: '负责产品规划、需求分析和项目管理。',
-                workspace: '~/.openclaw/workspace/multi-agent-team/agents/product-manager',
-                createdAt: '2026-02-10'
-            },
-            {
-                id: 'project-manager',
-                name: '📅 项目经理',
-                role: '项目管理',
-                status: 'idle',
-                currentTask: '等待分配任务',
-                skills: ['进度跟踪', '任务协调', '风险管理', '团队协作'],
-                description: '负责项目进度跟踪和任务协调。',
-                workspace: '~/.openclaw/workspace/multi-agent-team/agents/project-manager',
-                createdAt: '2026-02-10'
-            },
-            {
-                id: 'architect',
-                name: '🏗️ 架构师',
-                role: '技术架构',
-                status: 'idle',
-                currentTask: '等待分配任务',
-                skills: ['系统设计', '技术选型', '性能优化', '安全性设计'],
-                description: '负责系统架构设计和技术选型。',
-                workspace: '~/.openclaw/workspace/multi-agent-team/agents/architect',
-                createdAt: '2026-02-10'
-            },
-            {
-                id: 'frontend-dev',
-                name: '🎨 前端开发',
-                role: '前端工程',
-                status: 'idle',
-                currentTask: '等待分配任务',
-                skills: ['React', 'Vue', 'TypeScript', 'CSS', 'UI实现'],
-                description: '负责前端界面开发和UI实现。',
-                workspace: '~/.openclaw/workspace/multi-agent-team/agents/frontend-dev',
-                createdAt: '2026-02-10'
-            },
-            {
-                id: 'backend-dev',
-                name: '⚙️ 后端开发',
-                role: '后端工程',
-                status: 'idle',
-                currentTask: '等待分配任务',
-                skills: ['Python', 'Node.js', 'API开发', '数据库', '部署'],
-                description: '负责后端服务开发和API接口实现。',
-                workspace: '~/.openclaw/workspace/multi-agent-team/agents/backend-dev',
-                createdAt: '2026-02-10'
-            }
-        ];
+        // 模拟数据 - 实际使用时由后端提供
+        // 由于无法直接访问OpenClaw API，页面每5秒自动刷新
         
-        let currentAgent = null;
+        document.getElementById('updateTime').textContent = '更新时间: ' + new Date().toLocaleString('zh-CN');
         
-        // Render agents
-        function renderAgents() {
-            const grid = document.getElementById('agentGrid');
-            grid.innerHTML = '';
-            
-            let working = 0, idle = 0, error = 0;
-            
-            agents.forEach(agent => {
-                if (agent.status === 'working') working++;
-                else if (agent.status === 'idle') idle++;
-                else error++;
-                
-                const card = document.createElement('div');
-                card.className = `agent-card ${agent.status}`;
-                card.onclick = () => showAgentDetail(agent);
-                
-                const skillsHtml = agent.skills.slice(0, 4).map(s => 
-                    `<span class="skill-tag">${s}</span>`
-                ).join('');
-                
-                card.innerHTML = `
-                    <div class="card-header">
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <div class="agent-icon" style="background:${getStatusColor(agent.status)}20">${agent.name.split(' ')[0]}</div>
-                            <div>
-                                <div class="agent-name">${agent.name.split(' ')[1]}</div>
-                                <div class="agent-role">${agent.role}</div>
-                            </div>
-                        </div>
-                        <span class="status-badge status-${agent.status}">${agent.status === 'working' ? '工作中' : agent.status === 'idle' ? '空闲' : '错误'}</span>
-                    </div>
-                    <div class="card-body">
-                        <div class="current-task">
-                            <div class="label">当前任务</div>
-                            <div class="task">${agent.currentTask}</div>
-                        </div>
-                        <div class="skills">${skillsHtml}</div>
-                        <div class="agent-meta">
-                            <span>ID: ${agent.id}</span>
-                            <span>创建: ${agent.createdAt}</span>
-                        </div>
-                    </div>
-                `;
-                
-                grid.appendChild(card);
-            });
-            
-            document.getElementById('workingCount').textContent = working;
-            document.getElementById('idleCount').textContent = idle;
-        }
-        
-        function getStatusColor(status) {
-            if (status === 'working') return '#3fb950';
-            if (status === 'idle') return '#8b949e';
-            return '#f85149';
-        }
-        
-        // Show agent detail
-        function showAgentDetail(agent) {
-            currentAgent = agent;
-            document.getElementById('modalTitle').textContent = agent.name + ' 详情';
-            
-            const skillsHtml = agent.skills.map(s => 
-                `<span class="skill-tag">${s}</span>`
-            ).join('');
-            
-            document.getElementById('modalBody').innerHTML = `
-                <div class="detail-section">
-                    <h3>📝 角色介绍</h3>
-                    <p>${agent.description}</p>
-                </div>
-                <div class="detail-section">
-                    <h3>🛠️ 技能</h3>
-                    <div class="skills">${skillsHtml}</div>
-                </div>
-                <div class="detail-section">
-                    <h3>📋 详细信息</h3>
-                    <p><strong>代理ID:</strong> ${agent.id}</p>
-                    <p><strong>角色:</strong> ${agent.role}</p>
-                    <p><strong>状态:</strong> ${agent.status === 'working' ? '工作中' : '空闲'}</p>
-                    <p><strong>工作空间:</strong> ${agent.workspace}</p>
-                    <p><strong>创建时间:</strong> ${agent.createdAt}</p>
-                </div>
-                <div class="detail-section">
-                    <h3>📌 当前任务</h3>
-                    <p>${agent.currentTask}</p>
-                </div>
-            `;
-            
-            document.getElementById('detailModal').classList.add('active');
-        }
-        
-        function closeModal() {
-            document.getElementById('detailModal').classList.remove('active');
-            currentAgent = null;
-        }
-        
-        // Delete agent
-        function deleteAgent() {
-            if (!currentAgent) return;
-            if (currentAgent.id === 'main') {
-                alert('不能删除主代理！');
-                return;
-            }
-            if (confirm(`确定要删除代理 "${currentAgent.name}" 吗？`)) {
-                // In real implementation, this would call the API
-                alert('删除功能需要通过命令行执行:\nopenclaw agents remove ' + currentAgent.id);
-                closeModal();
-            }
-        }
-        
-        // Create agent
-        function openCreateModal() {
-            document.getElementById('createModal').classList.add('active');
-        }
-        
-        function closeCreateModal() {
-            document.getElementById('createModal').classList.remove('active');
-        }
-        
-        function createAgent() {
-            const id = document.getElementById('newAgentId').value;
-            const role = document.getElementById('newAgentRole').value;
-            const model = document.getElementById('newAgentModel').value;
-            
-            if (!id || !role) {
-                alert('请填写代理名称和角色');
-                return;
-            }
-            
-            alert('创建代理命令:\nopenclaw agents add ' + id + ' --model ' + model + '\n\n请在终端中执行此命令');
-            closeCreateModal();
-        }
-        
-        // Refresh
-        function refreshAgents() {
-            renderAgents();
-            addActivity('刷新代理列表');
-        }
-        
-        function addActivity(text) {
-            const list = document.getElementById('activityList');
-            const time = new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'});
-            const item = document.createElement('div');
-            item.className = 'activity-item';
-            item.innerHTML = `<span class="activity-time">${time}</span> ${text}`;
-            list.insertBefore(item, list.firstChild);
-        }
-        
-        // Initialize
-        renderAgents();
-        
-        // Auto refresh every 30 seconds
-        setInterval(() => {
-            // Simulate status changes
-            agents.forEach(agent => {
-                if (agent.id === 'security-expert') {
-                    agent.currentTask = '漏洞扫描进行中 - ' + Math.floor(Math.random() * 50 + 100) + '个进程正在扫描' + Math.floor(Math.random() * 100 + 400) + '+目标';
-                }
-            });
-            renderAgents();
-        }, 30000);
+        // 设置5秒自动刷新
+        setTimeout(function() {
+            location.reload();
+        }, 5000);
     </script>
 </body>
 </html>
