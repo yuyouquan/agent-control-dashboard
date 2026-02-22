@@ -24,63 +24,85 @@
         
         .agent-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 16px; }
         .agent-card.running { border-left: 4px solid #3fb950; }
-        .agent-card.done { border-left: 4px solid #58a6ff; }
-        .agent-card.timeout { border-left: 4px solid #f0883e; }
         
         .agent-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .agent-name { font-weight: 600; color: #c9d1d9; }
-        .agent-status { padding: 4px 10px; border-radius: 12px; font-size: 11px; }
-        .agent-status.running { background: #238636; color: #fff; }
-        .agent-status.done { background: #58a6ff; color: #fff; }
-        .agent-status.timeout { background: #f0883e; color: #000; }
+        .agent-status { padding: 4px 10px; border-radius: 12px; font-size: 11px; background: #238636; color: #fff; }
         
-        .agent-task { color: #8b949e; font-size: 12px; margin-bottom: 12px; padding: 10px; background: #0d1117; border-radius: 6px; word-break: break-all; }
         .agent-meta { display: flex; gap: 20px; color: #8b949e; font-size: 12px; }
         
         .empty-state { text-align: center; padding: 40px; color: #8b949e; }
         .time { text-align: center; padding: 10px; color: #8b949e; font-size: 12px; }
-        
-        .note { text-align: center; padding: 10px; background: #f0883e; color: #000; font-size: 12px; }
+        .note { text-align: center; padding: 10px; background: #1a2332; color: #8b949e; font-size: 12px; border-bottom: 1px solid #30363d; }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🧠 子代理控制沙盘</h1>
-        <button class="btn" onclick="location.reload()">🔄 刷新</button>
+        <button class="btn" onclick="loadStatus()">🔄 刷新</button>
     </div>
     <div class="note">📌 页面每5秒自动刷新以获取最新状态</div>
     <div class="time" id="updateTime"></div>
     
     <div class="stats-bar">
-        <div class="stat"><div class="stat-value" style="color:#3fb950" id="activeCount">0</div><div class="stat-label">运行中</div></div>
-        <div class="stat"><div class="stat-value" style="color:#58a6ff" id="recentCount">0</div><div class="stat-label">历史记录</div></div>
-        <div class="stat"><div class="stat-value" style="color:#f0883e" id="totalCount">0</div><div class="stat-label">总任务</div></div>
+        <div class="stat"><div class="stat-value" style="color:#3fb950" id="sessionCount">-</div><div class="stat-label">活跃会话</div></div>
+        <div class="stat"><div class="stat-value" style="color:#58a6ff" id="mainSession">1</div><div class="stat-label">主会话</div></div>
+        <div class="stat"><div class="stat-value" style="color:#f0883e" id="totalTokens">-</div><div class="stat-label">Tokens使用</div></div>
     </div>
     
     <div class="section">
-        <h2>🔄 运行中的子代理</h2>
-        <div class="agents-grid" id="activeAgents">
-            <div class="empty-state">暂无运行中的子代理</div>
-        </div>
-    </div>
-    
-    <div class="section">
-        <h2>📜 最近任务 (最近30分钟)</h2>
-        <div class="agents-grid" id="recentAgents">
-            <div class="empty-state">暂无历史记录</div>
+        <h2>🔄 活跃会话</h2>
+        <div class="agents-grid" id="sessions">
+            <div class="empty-state">加载中...</div>
         </div>
     </div>
 
     <script>
-        // 模拟数据 - 实际使用时由后端提供
-        // 由于无法直接访问OpenClaw API，页面每5秒自动刷新
+        async function loadStatus() {
+            try {
+                const response = await fetch('/subagents_status.json?_=' + Date.now());
+                const data = await response.json();
+                
+                const sessions = data.sessions || [];
+                document.getElementById('sessionCount').textContent = sessions.length;
+                
+                // 提取token使用情况
+                const raw = data.raw || '';
+                const tokenMatch = raw.match(/(\d+)k\/(\d+)k/);
+                if (tokenMatch) {
+                    document.getElementById('totalTokens').textContent = tokenMatch[1] + 'k/' + tokenMatch[2] + 'k';
+                }
+                
+                // 渲染会话
+                if (sessions.length === 0) {
+                    document.getElementById('sessions').innerHTML = '<div class="empty-state">暂无活跃会话</div>';
+                } else {
+                    document.getElementById('sessions').innerHTML = sessions.map(s => `
+                        <div class="agent-card running">
+                            <div class="agent-header">
+                                <span class="agent-name">💬 ${s.key}</span>
+                                <span class="agent-status">活跃</span>
+                            </div>
+                            <div class="agent-meta">
+                                <span>⏱️ ${s.age}</span>
+                                <span>📊 ${s.model}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                
+                document.getElementById('updateTime').textContent = '更新时间: ' + new Date().toLocaleString('zh-CN');
+            } catch(e) {
+                console.error('加载失败:', e);
+                document.getElementById('sessions').innerHTML = '<div class="empty-state">加载失败，请刷新</div>';
+            }
+        }
         
-        document.getElementById('updateTime').textContent = '更新时间: ' + new Date().toLocaleString('zh-CN');
+        // 页面加载时获取状态
+        loadStatus();
         
-        // 设置5秒自动刷新
-        setTimeout(function() {
-            location.reload();
-        }, 5000);
+        // 每5秒自动刷新
+        setInterval(loadStatus, 5000);
     </script>
 </body>
 </html>
